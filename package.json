@@ -1,0 +1,20 @@
+{
+  "name": "un-platform",
+  "version": "1.0.0",
+  "description": "منصة رقمية لمنظمة أممية - استبيان عبر QR Code + شات بوت واتساب",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "bot": "node whatsapp-bot.js",
+    "generate": "node generate-qrcodes.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "uuid": "^9.0.1",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

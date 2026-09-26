@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>سكانار الحضور - فريق التنظيم</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background:#111; color:#fff; text-align:center; margin:0; padding:20px; }
+  #reader { width: 100%; max-width: 420px; margin: 20px auto; border-radius: 12px; overflow: hidden; }
+  #result { margin-top: 16px; font-size: 1.1rem; min-height: 30px; }
+  .ok { color: #2ecc71; }
+  .err { color: #e74c3c; }
+</style>
+</head>
+<body>
+  <h2>📷 سكانار تسجيل الحضور</h2>
+  <p>وجّه الكاميرا نحو QR Code الخاص بالمشارك</p>
+  <div id="reader"></div>
+  <div id="result"></div>
+
+<script>
+const resultDiv = document.getElementById('result');
+
+function extractUid(text) {
+  try {
+    const url = new URL(text);
+    return url.searchParams.get('uid');
+  } catch {
+    return null;
+  }
+}
+
+async function onScanSuccess(decodedText) {
+  const uid = extractUid(decodedText);
+  if (!uid) {
+    resultDiv.innerHTML = '<span class="err">QR غير صالح</span>';
+    return;
+  }
+  const res = await fetch(`/api/participant/${uid}/checkin`, { method: 'POST' });
+  if (res.ok) {
+    resultDiv.innerHTML = '<span class="ok">✔ تم تسجيل الحضور</span>';
+  } else {
+    resultDiv.innerHTML = '<span class="err">✘ مشارك غير معروف</span>';
+  }
+}
+
+const scanner = new Html5Qrcode('reader');
+scanner.start(
+  { facingMode: 'environment' },
+  { fps: 10, qrbox: 250 },
+  onScanSuccess
+);
+</script>
+</body>
+</html>

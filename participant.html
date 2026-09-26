@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>استبيان المشاركين</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, #0b5394 0%, #1c9099 100%);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    padding: 28px 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  h1 { font-size: 1.3rem; color: #0b5394; margin-top: 0; }
+  .label { font-weight: 600; margin: 16px 0 6px; display: block; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    background: #0b5394;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover { background: #08406f; }
+  .msg { text-align: center; padding: 20px 0; font-size: 1.05rem; }
+  .error { color: #c0392b; }
+  .success { color: #1e8449; }
+  .badge {
+    display:inline-block; background:#eef6ff; color:#0b5394;
+    padding:4px 10px; border-radius:20px; font-size:.85rem; margin-bottom:10px;
+  }
+</style>
+</head>
+<body>
+  <div class="card" id="app">جاري التحميل...</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const uid = params.get('uid');
+const app = document.getElementById('app');
+
+async function init() {
+  if (!uid) {
+    app.innerHTML = '<p class="msg error">رابط غير صالح: لا يوجد معرّف مشارك.</p>';
+    return;
+  }
+
+  const res = await fetch(`/api/participant/${uid}`);
+  if (!res.ok) {
+    app.innerHTML = '<p class="msg error">لم نتعرف على هذا الـ QR. تواصل مع فريق التنظيم.</p>';
+    return;
+  }
+  const data = await res.json();
+
+  if (data.already_responded) {
+    app.innerHTML = `
+      <div class="badge">${data.label}</div>
+      <p class="msg success">✔ لقد سبق وأرسلت إجاباتك. شكراً لمشاركتك!</p>`;
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="badge">${data.label}</div>
+    <h1>استبيان المشاركة</h1>
+    <form id="qform">
+      <label class="label">ما رأيك في تنظيم الفعالية؟</label>
+      <select name="rating" required>
+        <option value="">اختر...</option>
+        <option value="5">ممتاز</option>
+        <option value="4">جيد جداً</option>
+        <option value="3">جيد</option>
+        <option value="2">متوسط</option>
+        <option value="1">ضعيف</option>
+      </select>
+
+      <label class="label">أي محور شدّ انتباهك أكثر؟</label>
+      <input type="text" name="topic" placeholder="اكتب هنا..." required />
+
+      <label class="label">اقتراحات أو ملاحظات (اختياري)</label>
+      <textarea name="comments" rows="3" placeholder="اكتب هنا..."></textarea>
+
+      <label class="label">رقم واتساب (اختياري - فقط إذا تحب تستلم تذكيرات وتحديثات)</label>
+      <input type="tel" name="whatsapp" placeholder="+216 XX XXX XXX" />
+
+      <button type="submit">إرسال الإجابات</button>
+    </form>
+  `;
+
+  document.getElementById('qform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const answers = {
+      rating: fd.get('rating'),
+      topic: fd.get('topic'),
+      comments: fd.get('comments') || '',
+    };
+    const whatsapp = fd.get('whatsapp');
+
+    const submitRes = await fetch(`/api/participant/${uid}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+
+    if (whatsapp) {
+      await fetch(`/api/participant/${uid}/link-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsapp_number: whatsapp }),
+      });
+    }
+
+    if (submitRes.ok) {
+      app.innerHTML = '<p class="msg success">✔ شكراً لك! تم تسجيل إجاباتك بنجاح.</p>';
+    } else {
+      app.innerHTML = '<p class="msg error">حدث خطأ، حاول مجدداً.</p>';
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
